@@ -1,9 +1,7 @@
 import { useThree } from "@react-three/fiber";
-import { Video } from "@remotion/media";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { CanvasTexture, Texture } from "three";
-import { MediabunnyMetadata } from "./helpers/get-media-metadata";
+import { Texture } from "three";
 import {
   CAMERA_DISTANCE,
   PHONE_CURVE_SEGMENTS,
@@ -16,9 +14,8 @@ import { RoundedBox } from "./RoundedBox";
 export const Phone: React.FC<{
   readonly phoneColor: string;
   readonly phoneLayout: PhoneLayout;
-  readonly mediaMetadata: MediabunnyMetadata;
-  readonly videoSrc: string;
-}> = ({ phoneColor, phoneLayout, mediaMetadata, videoSrc }) => {
+  readonly texture: Texture;
+}> = ({ phoneColor, phoneLayout, texture }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -79,47 +76,12 @@ export const Phone: React.FC<{
     phoneLayout.screen.width,
   ]);
 
-  const [canvasTexture] = useState(() => {
-    return new OffscreenCanvas(
-      mediaMetadata.dimensions.width,
-      mediaMetadata.dimensions.height,
-    );
-  });
-
-  const [context] = useState(() => {
-    const context = canvasTexture.getContext("2d");
-    if (!context) {
-      throw new Error("Failed to get context");
-    }
-    return context;
-  });
-
-  const [texture] = useState<Texture>(() => {
-    const tex = new CanvasTexture(canvasTexture);
-    tex.repeat.y = 1 / phoneLayout.screen.height;
-    tex.repeat.x = 1 / phoneLayout.screen.width;
-    return tex;
-  });
-
-  const { invalidate } = useThree();
-
-  const onVideoFrame = useCallback(
-    (frame: CanvasImageSource) => {
-      context.drawImage(frame, 0, 0);
-      texture.needsUpdate = true;
-      invalidate();
-    },
-    [context, texture, invalidate],
-  );
-
   return (
     <group
       scale={entranceAnimation}
       rotation={[0, rotateY, 0]}
       position={[0, translateY, 0]}
     >
-      <Video src={videoSrc} onVideoFrame={onVideoFrame} headless muted />
-
       <RoundedBox
         radius={phoneLayout.phone.radius}
         depth={phoneLayout.phone.thickness}
